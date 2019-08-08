@@ -199,6 +199,14 @@ def full_chain():
     }
     return jsonify(response), 200
 
+# Adding an endpoint called last_proof that returns the proof of the last block in the chain
+@app.route("/last_proof", methods=["GET"])  
+def last_proof(): 
+    last_block = blockchain.last_block
+    last_proof = last_block["proof"]
+
+    response = {last_proof: f"{last_proof}"}
+    return jsonify(response), 200
 
 # Run the program on port 5000
 if __name__ == '__main__':
