@@ -6,16 +6,15 @@ import sys
 
 # TODO: Implement functionality to search for a proof 
 def proof_of_work(self, last_proof):
-    """
-    Proof of Work Algorithm
-    Find a number p such that hash(last_block_string, p) contains 6 leading
-    zeroes
-    """
+    # Proof of Work Algorithm
+    # Find a number p such that hash(last_block_string, p) contains 6 leading zeros
 
     proof = 0
 
     while self.valid_proof(last_proof, proof) is False:
         proof += 1
+    
+    print("New proof: " + str(proof))    
 
     return proof
 
