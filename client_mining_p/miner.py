@@ -36,6 +36,7 @@ def valid_proof(last_proof, proof):
         return True
     else:
         return False
+    
 
 if __name__ == '__main__':
     # What node are we interacting with?
