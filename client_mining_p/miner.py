@@ -65,5 +65,5 @@ if __name__ == '__main__':
         # add 1 to the number of coins mined and print it.  Otherwise,
         # print the message from the server.
         if r.json()["message"] == "New Block Forged":
-            mined += 1
-            print("The total number of Lambda Coins mined is: ", mined)
+            coins_mined += 1
+            print("The total number of Lambda Coins mined is: ", coins_mined)
