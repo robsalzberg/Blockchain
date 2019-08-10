@@ -5,16 +5,16 @@ import sys
 
 
 # TODO: Implement functionality to search for a proof 
-def proof_of_work(self, last_proof):
+def proof_of_work(last_proof):
     # Proof of Work Algorithm
     # Find a number p such that hash(last_block_string, p) contains 6 leading zeros
-
+    print("Starting work on a new proof...")
     proof = 0
 
-    while self.valid_proof(last_proof, proof) is False:
+    while valid_proof(last_proof, proof) is False:
         proof += 1
     
-    print("New proof: " + str(proof))    
+    print("Attempting to mine")    
 
     return proof
 
@@ -28,7 +28,7 @@ def valid_proof(last_proof, proof):
     guess_hash = hashlib.sha256(guess).hexdigest()
 
     # use hash function
-    beginning = guess_hash[:6]
+    beginning = guess_hash[0:6]
 
     # check if 6 leading 0's in hash result
     if beginning == "000000":
