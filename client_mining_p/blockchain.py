@@ -75,7 +75,7 @@ class Blockchain(object):
         return self.chain[-1]
 
     @staticmethod
-    def valid_proof(last_proof, proof):
+    def valid_proof(last_block_string, proof):
         """
         Validates the Proof:  Does hash(last_proof, proof) 
         contain 6 leading zeroes?
@@ -134,7 +134,7 @@ blockchain = Blockchain()
 # Modify the `mine` endpoint to instead receive and validate or reject a new proof sent by a client.
 # Return a message indicating success or failure. Remember, a valid proof should fail for all senders except the first.
 
-@app.route('/mine', methods=['POST'])
+@app.route('/mine', methods=['POST', 'GET'])
 def mine():
     # We run the proof of work algorithm to get the next proof...
     # proof = blockchain.proof_of_work(blockchain.last_block)
