@@ -176,8 +176,9 @@ def mine():
     blockchain.new_transaction(0, node_identifier, 1)
 
     # Forge the new Block by adding it to the chain
-    # new_block(self, proof, previous_hash=None):
-    block = blockchain.new_block(values['proof'], blockchain.last_block)
+    # When creating a new block, the new block function is expecting to 
+    # receive the valid proof and the previous hash of the last block.
+    block = blockchain.new_block(values['proof'], blockchain.hash(blockchain.last_block))
 
     # Send a response with the new block
     response = {

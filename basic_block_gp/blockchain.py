@@ -84,7 +84,7 @@ class Blockchain(object):
 
         proof = 0
         # for block 1, hash(1, p) = 000000x
-        while self.valid_proof(last_proof, proof) is False:
+        while self.valid_proof(last_proof, proof):
             proof += 1
 
         return proof
