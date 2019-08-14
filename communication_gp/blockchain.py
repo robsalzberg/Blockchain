@@ -16,7 +16,7 @@ class Blockchain(object):
         self.current_transactions = []
         self.nodes = set()
 
-        self.new_block(previous_hash=1, proof=100)
+        self.new_block(proof=99, previous_hash = 1)
 
     def new_block(self, proof, previous_hash=None):
         """
@@ -78,29 +78,22 @@ class Blockchain(object):
     def last_block(self):
         return self.chain[-1]
 
-    def proof_of_work(self, last_proof):
-        """
-        Simple Proof of Work Algorithm
-        - Find a number p' such that hash(pp') contains 6 leading
-        zeroes, where p is the previous p'
-        - p is the previous proof, and p' is the new proof
-        """
-
-        proof = 0
-        while self.valid_proof(last_proof, proof) is False:
-            proof += 1
-
-        return proof
-
     @staticmethod
-    def valid_proof(last_proof, proof):
+    def valid_proof(last_block_string, proof):
         """
-        Validates the Proof:  Does hash(last_proof, proof) contain 6
-        leading zeroes?
+        Validates the Proof:  Does hash(last_proof, proof) 
+        contain 6 leading zeroes?
         """
-        guess = f'{last_proof}{proof}'.encode()
+        # build string to hash
+        guess = f'{last_block_string}{proof}'.encode()
+        # use hash function
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:6] == "000000"
+        # check if 6 leading 0's in hash result
+        beg = guess_hash[0:6] 
+        if beg == "000000":
+            return True
+        else:
+            return False
 
     def valid_chain(self, chain):
         """
@@ -119,61 +112,18 @@ class Blockchain(object):
             print(f'{block}')
             print("\n-------------------\n")
             # Check that the hash of the block is correct
+            # TODO: Return false if hash isn't correct
             if block['previous_hash'] != self.hash(last_block):
                 return False
-
             # Check that the Proof of Work is correct
-            if not self.valid_proof(last_block['proof'], block['proof']):
+            # TODO: Return false if proof isn't correct
+            if not self.valid_proof(last_block["proof"], block["proof"]):
                 return False
 
             last_block = block
             current_index += 1
 
         return True
-
-    def register_node(self, address):
-        """
-        Add a new node to the list of nodes
-        :param address: <str> Address of node. Eg. 'http://192.168.0.5:5000'
-        :return: None
-        """
-
-        parsed_url = urlparse(address)
-        self.nodes.add(parsed_url.netloc)
-
-    def resolve_conflicts(self):
-        """
-        This is our Consensus Algorithm, it resolves conflicts
-        by replacing our chain with the longest one in the network.
-        :return: <bool> True if our chain was replaced, False if not
-        """
-
-        neighbours = self.nodes
-        new_chain = None
-
-        # We're only looking for chains longer than ours
-        max_length = len(self.chain)
-
-        # Grab and verify the chains from all the nodes in our network
-        for node in neighbours:
-            response = requests.get(f'http://{node}/chain')
-
-            if response.status_code == 200:
-                length = response.json()['length']
-                chain = response.json()['chain']
-
-                # Check if the length is longer and the chain is valid
-                if length > max_length and self.valid_chain(chain):
-                    max_length = length
-                    new_chain = chain
-
-        # Replace our chain if we discovered a new, valid chain longer than
-        # ours
-        if new_chain:
-            self.chain = new_chain
-            return True
-
-        return False
 
 
 # Instantiate our Node
@@ -185,127 +135,84 @@ node_identifier = str(uuid4()).replace('-', '')
 # Instantiate the Blockchain
 blockchain = Blockchain()
 
+# Modify the `mine` endpoint to instead receive and validate or reject a new proof sent by a client.
+# Return a message indicating success or failure. Remember, a valid proof should fail for all senders except the first.
 
-@app.route('/mine', methods=['POST'])
+@app.route('/mine', methods=['POST', 'GET'])
 def mine():
-    # Determine if proof is valid
-    last_block = blockchain.last_block
-    last_proof = last_block['proof']
+    # We run the proof of work algorithm to get the next proof...
+    # proof = blockchain.proof_of_work(blockchain.last_block)
 
     values = request.get_json()
-    submitted_proof = values.get('proof')
 
-    if blockchain.valid_proof(last_proof, submitted_proof):
-        # We must receive a reward for finding the proof.
-        # The sender is "0" to signify that this node has mine a new coin
-        blockchain.new_transaction(
-            sender="0",
-            recipient=node_identifier,
-            amount=1,
-        )
+    required = ['proof']
 
-        # Forge the new BLock by adding it to the chain
-        previous_hash = blockchain.hash(last_block)
-        block = blockchain.new_block(submitted_proof, previous_hash)
 
-        response = {
-            'message': "New Block Forged",
-            'index': block['index'],
-            'transactions': block['transactions'],
-            'proof': block['proof'],
-            'previous_hash': block['previous_hash'],
-        }
-        return jsonify(response), 200
-    else:
-        response = {
-            'message': "Proof was invalid or already submitted."
-        }
+    if not all(k in values for k in required):
+        return "Missing values", 400
+
+    if not blockchain.valid_proof(blockchain.last_block['previous_hash'], values['proof']):
+        response = {'message': 'Proof is not valid'}
+
         return jsonify(response), 200
 
+    # We must receive a reward for finding the proof.
+    # TODO:
+    # The sender is "0" to signify that this node has mine a new coin
+    # The recipient is the current node, it did the mining!
+    # The amount is 1 coin as a reward for mining the next block
+    # new_transaction(self, sender, recipient, amount):
+    blockchain.new_transaction(0, node_identifier, 1)
 
-@app.route('/transactions/new', methods=['POST'])
+    # Forge the new Block by adding it to the chain
+    # When creating a new block, the new block function is expecting to 
+    # receive the valid proof and the previous hash of the last block.
+    block = blockchain.new_block(values['proof'], blockchain.hash(blockchain.last_block))
+
+    # Send a response with the new block
+    response = {
+        'message': "New Block Forged",
+        'index': block['index'],
+        'transactions': block['transactions'],
+        'proof': block['proof'],
+        'previous_hash': block['previous_hash'],}
+
+    return jsonify(response), 200
+
+@app.route("/transactions/new", methods=["POST"])
 def new_transaction():
     values = request.get_json()
-
+    
     # Check that the required fields are in the POST'ed data
-    required = ['sender', 'recipient', 'amount']
+    required = ["sender", "recipient", "amount"]
     if not all(k in values for k in required):
-        return 'Missing Values', 400
-
+        return "Missing Values", 400
     # Create a new Transaction
-    index = blockchain.new_transaction(values['sender'],
-                                       values['recipient'],
-                                       values['amount'])
+    index = blockchain.new_transaction(
+        values["sender"], values["recipient"], values["amount"])
 
     response = {'message': f'Transaction will be added to Block {index}'}
-    return jsonify(response), 201
+    return jsonify(response), 201 
 
-
-@app.route('/chain', methods=['GET'])
+@app.route("/chain", methods=["GET"])
 def full_chain():
     response = {
-        'chain': blockchain.chain,
-        'length': len(blockchain.chain),
-    }
-    return jsonify(response), 200
+        # TODO: Return the chain and its current length
+        "currentChain": blockchain.chain,
+        "length": len(blockchain.chain),}
 
+    return jsonify(response), 200   
 
-@app.route('/last_proof', methods=['GET'])
-def last_proof():
-    last_proof_value = blockchain.last_block.get('proof')
+# Add an endpoint called `last_proof` that returns the `proof` of the last block in the chain
+@app.route("/last_block_string", methods=["GET"])
+def last_block_string():
     response = {
-        'proof': last_proof_value
+        'last_block_string': blockchain.last_block
     }
-    return jsonify(response), 200
-
-
-# Post body as JSON to add node
-# {
-# 	"nodes": ["http://localhost:5001"]
-# }
-@app.route('/nodes/register', methods=['POST'])
-def register_nodes():
-
-    values = request.get_json()
-    nodes = values.get('nodes')
-    if nodes is None:
-        return "Error: Please supply a valid list of nodes", 400
-
-    for node in nodes:
-        blockchain.register_node(node)
-
-    response = {
-        'message': 'New nodes have been added',
-        'total_nodes': list(blockchain.nodes),
-    }
-    return jsonify(response), 201
-
-
-@app.route('/nodes/resolve', methods=['GET'])
-def consensus():
-    replaced = blockchain.resolve_conflicts()
-
-    if replaced:
-        response = {
-            'message': 'Our chain was replaced',
-            'new_chain': blockchain.chain
-        }
-    else:
-        response = {
-            'message': 'Our chain is authoritative',
-            'chain': blockchain.chain
-        }
 
     return jsonify(response), 200
 
-
-# Note, when demoing, start with this, then change to the below
-# if __name__ == '__main__':
-#     app.run(host='0.0.0.0', port=5000)
-
+# Run the program on port 5000
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        port = int(sys.argv[1])
-    else:
-        port = 5000
-    app.run(host='0.0.0.0', port=port)
+    # app.run(host='0.0.0.0', port=5000)
+    app.run(host='localhost', port=5000)
