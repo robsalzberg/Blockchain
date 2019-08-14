@@ -5,13 +5,13 @@ import sys
 
 
 # TODO: Implement functionality to search for a proof 
-def proof_of_work(last_proof):
+def proof_of_work(last_block_string):
     # Proof of Work Algorithm
     # Find a number p such that hash(last_block_string, p) contains 6 leading zeros
     print("Starting work on a new proof...")
     proof = 0
 
-    while valid_proof(last_proof, proof) is False:
+    while valid_proof(last_block_string, proof) is False:
         proof += 1
     
     print("Attempting to mine")    
@@ -80,4 +80,5 @@ if __name__ == '__main__':
         if data.get('message') == 'New Block Forged':
             coins_mined += 1
             print('You have:' + str(coins_mined) + 'coins')
-        print(data.get('message'))
+        else:
+            print(data.get('message'))

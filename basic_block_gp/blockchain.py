@@ -84,7 +84,7 @@ class Blockchain(object):
 
         proof = 0
         # for block 1, hash(1, p) = 000000x
-        while self.valid_proof(last_proof, proof):
+        while not self.valid_proof(last_proof, proof):
             proof += 1
 
         return proof
@@ -147,7 +147,7 @@ blockchain = Blockchain()
 @app.route('/mine', methods=['GET'])
 def mine():
     # We run the proof of work algorithm to get the next proof...
-    proof = blockchain.proof_of_work(blockchain.last_block['proof'])
+    proof = blockchain.proof_of_work(blockchain.last_block['previous_hash'])
 
     # We must receive a reward for finding the proof.
     # TODO:

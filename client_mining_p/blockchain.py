@@ -12,7 +12,7 @@ class Blockchain(object):
         self.current_transactions = []
         self.nodes = set()
 
-        self.new_block(previous_hash=1, proof=99)
+        self.new_block(proof=99, previous_hash = 1)
 
     def new_block(self, proof, previous_hash=None):
         """
@@ -74,21 +74,6 @@ class Blockchain(object):
     def last_block(self):
         return self.chain[-1]
 
-    # def proof_of_work(self, last_proof):
-    #    """
-    #    Simple Proof of Work Algorithm
-    #    - Find a number p' such that hash(pp') contains 4 leading
-    #    zeroes, where p is the previous p'
-    #    - p is the previous proof, and p' is the new proof
-    #    """
-
-    #    proof = 0
-        # for block 1, hash(1, p) = 000000x
-    #    while self.valid_proof(last_proof, proof) is False:
-    #        proof += 1
-
-    #    return proof
-
     @staticmethod
     def valid_proof(last_proof, proof):
         """
@@ -96,11 +81,11 @@ class Blockchain(object):
         contain 6 leading zeroes?
         """
         # build string to hash
-        guess = f'{last_proof}{proof}'.encode()
+        guess = f'{last_block_string}{proof}'.encode()
         # use hash function
         guess_hash = hashlib.sha256(guess).hexdigest()
         # check if 6 leading 0's in hash result
-        beg = guess_hash[0:6] # [:6]
+        beg = guess_hash[0:6] 
         if beg == "000000":
             return True
         else:
@@ -162,7 +147,7 @@ def mine():
     if not all(k in values for k in required):
         return "Missing values", 400
 
-    if not blockchain.valid_proof(last_proof, values['proof']):
+    if not blockchain.valid_proof(blockchain.last_block['previous_hash'], values['proof']):
         response = {'message': 'Proof is not valid'}
 
         return jsonify(response), 200
@@ -202,7 +187,7 @@ def new_transaction():
     index = blockchain.new_transaction(
         values["sender"], values["recipient"], values["amount"])
 
-    response = {"message": f"Transaction will be added to Block {index}"}
+    response = {'message': f'Transaction will be added to Block {index}'}
     return jsonify(response), 201 
 
 @app.route("/chain", methods=["GET"])
@@ -215,12 +200,12 @@ def full_chain():
     return jsonify(response), 200   
 
 # Add an endpoint called `last_proof` that returns the `proof` of the last block in the chain
-@app.route("/last_proof", methods=["GET"])
-def last_proof():
-    last_block = blockchain.last_block
-    last_proof = last_block["proof"]
+@app.route("/last_block_string", methods=["GET"])
+def last_block_string():
+    response = {
+        'last_block_string': blockchain.last_block
+    }
 
-    response = {"last_proof": f"{last_proof}"}
     return jsonify(response), 200
 
 # Run the program on port 5000
