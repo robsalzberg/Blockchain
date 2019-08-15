@@ -101,20 +101,32 @@ class Blockchain(object):
         # use hash function
         guess_hash = hashlib.sha256(guess).hexdigest()
         # check if 6 leading 0's in hash result
-        beg = guess_hash[0:6] 
+        beg = guess_hash[0:6]
         if beg == "000000":
             return True
         else:
             return False
 
+    def register_node(self, address):
+        parsed_url = urlparse(address)
+        self.nodes.add(parsed_url.netloc)
+
+    def broadcast_new_block(self, new_block):
+        neighbors = self.nodes
+        post_data = {'block': block}
+
+        for node in neighbors:
+            r = request.post(f'http://{node}/block/new', json = post_data)
+
+        if response .status_code != 200:
+            # TODO: Error handling
+
     def valid_chain(self, chain):
         """
         Determine if a given blockchain is valid
-
         :param chain: <list> A blockchain
         :return: <bool> True if valid, False if not
         """
-
         last_block = chain[0]
         current_index = 1
 
@@ -137,7 +149,6 @@ class Blockchain(object):
 
         return True
 
-
 # Instantiate our Node
 app = Flask(__name__)
 
@@ -150,6 +161,7 @@ blockchain = Blockchain()
 # Modify the `mine` endpoint to instead receive and validate or reject a new proof sent by a client.
 # Return a message indicating success or failure. Remember, a valid proof should fail for all senders except the first.
 
+
 @app.route('/mine', methods=['POST', 'GET'])
 def mine():
     # We run the proof of work algorithm to get the next proof...
@@ -158,7 +170,6 @@ def mine():
     values = request.get_json()
 
     required = ['proof']
-
 
     if not all(k in values for k in required):
         return "Missing values", 400
@@ -177,9 +188,11 @@ def mine():
     blockchain.new_transaction(0, node_identifier, 1)
 
     # Forge the new Block by adding it to the chain
-    # When creating a new block, the new block function is expecting to 
+    # When creating a new block, the new block function is expecting to
     # receive the valid proof and the previous hash of the last block.
-    block = blockchain.new_block(values['proof'], blockchain.hash(blockchain.last_block))
+    block = blockchain.new_block(
+        values['proof'], blockchain.hash(blockchain.last_block))
+    blockchain.broadcast_new_block(block)    
 
     # Send a response with the new block
     response = {
@@ -187,14 +200,15 @@ def mine():
         'index': block['index'],
         'transactions': block['transactions'],
         'proof': block['proof'],
-        'previous_hash': block['previous_hash'],}
+        'previous_hash': block['previous_hash'], }
 
     return jsonify(response), 200
+
 
 @app.route("/transactions/new", methods=["POST"])
 def new_transaction():
     values = request.get_json()
-    
+
     # Check that the required fields are in the POST'ed data
     required = ["sender", "recipient", "amount"]
     if not all(k in values for k in required):
@@ -204,16 +218,17 @@ def new_transaction():
         values["sender"], values["recipient"], values["amount"])
 
     response = {'message': f'Transaction will be added to Block {index}'}
-    return jsonify(response), 201 
+    return jsonify(response), 201
+
 
 @app.route("/chain", methods=["GET"])
 def full_chain():
     response = {
         # TODO: Return the chain and its current length
         "currentChain": blockchain.chain,
-        "length": len(blockchain.chain),}
+        "length": len(blockchain.chain), }
 
-    return jsonify(response), 200   
+    return jsonify(response), 200
 
 # Add an endpoint called `last_proof` that returns the `proof` of the last block in the chain
 @app.route("/last_block_string", methods=["GET"])
@@ -223,6 +238,25 @@ def last_block_string():
     }
 
     return jsonify(response), 200
+
+
+@app.route('/nodes/register', method=['POST'])
+def register_nodes():
+    values = request.get_json()
+    nodes = values['nodes']
+
+    if nodes is None:
+        return 'Error, please supply node info', 400
+    for n in nodes:
+        blockchain.register_node(n)
+
+    response = {
+        'message': 'New nodes added successfully!',
+        'total_nodes': list(blockchain.nodes)
+    }
+
+    return jsonify(response), 201
+
 
 # Run the program on port 5000
 if __name__ == '__main__':
