@@ -257,7 +257,28 @@ def register_nodes():
 
     return jsonify(response), 201
 
+@app.route('/block/new/': methods=['POST'])
+def receive_block():
+    values = request.get_json()
 
+    # validation
+    new_block = values['block']
+    old_block = Blockchain.last_block
+
+    if new_block['index'] == old_block['index'] + 1:
+        if new_block['previous_hash'] == Blockchain.hash(old_block):
+            block_string = json.dump(old_block, sort_keys=True).encode()
+            if blockchain.valid_proof(block_string, new_block['proof'])
+                print('New block added!')
+                blockchain.add(new_block)
+                return 'Block Accepted', 200
+            else:
+                # TODO: Proof of workis invalid
+        else:
+            # TODO: Previous hash is invalid
+    else:
+        # TODO: Indexes are not consecutive
+        
 # Run the program on port 5000
 if __name__ == '__main__':
     # app.run(host='0.0.0.0', port=5000)
