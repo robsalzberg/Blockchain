@@ -113,13 +113,13 @@ class Blockchain(object):
 
     def broadcast_new_block(self, new_block):
         neighbors = self.nodes
-        post_data = {'block': block}
+        post_data = {'block': new_block}
 
         for node in neighbors:
-            r = request.post(f'http://{node}/block/new', json = post_data)
+            response = request.post(f'http://{node}/block/new', json = post_data)
 
-        if response .status_code != 200:
-            # TODO: Error handling
+        if response.status.code != 200:
+                return 'It is not working, expected status code of 200 was not returned.'
 
     def valid_chain(self, chain):
         """
@@ -240,7 +240,7 @@ def last_block_string():
     return jsonify(response), 200
 
 
-@app.route('/nodes/register', method=['POST'])
+@app.route('/nodes/register', methods=['POST'])
 def register_nodes():
     values = request.get_json()
     nodes = values['nodes']
@@ -257,27 +257,27 @@ def register_nodes():
 
     return jsonify(response), 201
 
-@app.route('/block/new/': methods=['POST'])
+@app.route('/block/new/', methods=['POST'])
 def receive_block():
     values = request.get_json()
 
     # validation
     new_block = values['block']
-    old_block = Blockchain.last_block
+    old_block = blockchain.last_block
 
     if new_block['index'] == old_block['index'] + 1:
         if new_block['previous_hash'] == Blockchain.hash(old_block):
             block_string = json.dump(old_block, sort_keys=True).encode()
-            if blockchain.valid_proof(block_string, new_block['proof'])
+            if blockchain.valid_proof(block_string, new_block['proof']):
                 print('New block added!')
                 blockchain.add(new_block)
                 return 'Block Accepted', 200
             else:
-                # TODO: Proof of workis invalid
+                return 'Proof of Work is Invalid', 500
         else:
-            # TODO: Previous hash is invalid
+            return 'Previous hash is invalid', 500
     else:
-        # TODO: Indexes are not consecutive
+        return 'Indexes are not consecutive', 500
         
 # Run the program on port 5000
 if __name__ == '__main__':
